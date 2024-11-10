@@ -3,22 +3,22 @@ import torch.nn as nn
 from collections import defaultdict
 import datetime
 
-class SimpleCNN(nn.Module):
-    def __init__(self, num_classes):
-        super(SimpleCNN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(32 * 56 * 56, 120)
-        self.fc2 = nn.Linear(120, num_classes)
+# class SimpleCNN(nn.Module):
+#     def __init__(self, num_classes):
+#         super(SimpleCNN, self).__init__()
+#         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
+#         self.pool = nn.MaxPool2d(2, 2)
+#         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+#         self.fc1 = nn.Linear(32 * 56 * 56, 120)
+#         self.fc2 = nn.Linear(120, num_classes)
 
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+#     def forward(self, x):
+#         x = self.pool(F.relu(self.conv1(x)))
+#         x = self.pool(F.relu(self.conv2(x)))
+#         x = x.view(x.size(0), -1)
+#         x = F.relu(self.fc1(x))
+#         x = self.fc2(x)
+#         return x
 
 class CDFLearnableActivation(nn.Module):
     def __init__(self, normalize_by_area=True, device='cpu'):
@@ -65,15 +65,48 @@ class CDFLearnableActivation(nn.Module):
         cdf_values = self.map_values_to_cdf(x)
         return cdf_values
 
+# class ModifiedCNN(SimpleCNN):
+#     def __init__(self, num_classes, device='cpu'):
+#         super(ModifiedCNN, self).__init__(num_classes)
+#         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
+#         self.to(self.device)
+#         self.custom_activation = CDFLearnableActivation(normalize_by_area=False, device=self.device)
+
+#     def forward(self, x):
+#         x = x.to(self.device)
+#         x = self.pool(self.custom_activation(self.conv1(x)))
+#         x = self.pool(self.custom_activation(self.conv2(x)))
+#         x = x.view(x.size(0), -1)
+#         x = self.custom_activation(self.fc1(x))
+#         x = self.fc2(x)
+#         return x
+
+class SimpleCNN(nn.Module):
+    def __init__(self, num_classes):
+        super(SimpleCNN, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(32 * 56 * 56, 120)
+        self.fc2 = nn.Linear(120, num_classes)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
 class ModifiedCNN(SimpleCNN):
     def __init__(self, num_classes, device='cpu'):
         super(ModifiedCNN, self).__init__(num_classes)
+        self.custom_activation = CDFLearnableActivation(normalize_by_area=False, device=device)
         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
-        self.to(self.device)
-        self.custom_activation = CDFLearnableActivation(normalize_by_area=False, device=self.device)
+        self.to(self.device)  # Ensure the entire model is on the correct device
 
     def forward(self, x):
-        x = x.to(self.device)
+        x = x.to(self.device)  # Ensure input x is on the same device
         x = self.pool(self.custom_activation(self.conv1(x)))
         x = self.pool(self.custom_activation(self.conv2(x)))
         x = x.view(x.size(0), -1)
